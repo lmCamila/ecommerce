@@ -14,7 +14,17 @@ class Product extends Model{
 
 		return $sql->select("SELECT * FROM tb_products ORDER BY desproduct");
 	}
+	public static function checkList($list){
 
+		foreach ($list as &$row) {
+			$p = new Product();
+			$p->setData($row);
+			$row = $p->getValues();
+		}
+
+	return $list;
+	
+	}
 	public function save()
 	{
 		$sql = new Sql();
@@ -97,6 +107,13 @@ class Product extends Model{
 
 			case "png":
 			$image = imagecreatefrompng($file["tmp_name"]);
+			$new_image = imagecreatetruecolor(imagesx($image),imagesy($image));
+			$white = imagecolorallocate($new_image, 255, 255, 255);
+			imagefill($new_image, 0, 0, $white);
+			imagealphablending($new_image, true);
+			imagecopy($new_image, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+			imagedestroy($image);
+			$image = $new_image;
 			break;
 
 		}
