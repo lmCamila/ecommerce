@@ -9,7 +9,7 @@ use \Hcode\Mailer;
 class User extends Model{
 
 	const SESSION = "User";
-	const SECRET = "HcodePhp7_Secret";
+	const SECRET = "l8qibxOhTABtyl6nywXMGYHkjxgjwo5mk9cfBVTs0eY=";
 	
 	public static function getFromSession()
 	{
@@ -82,9 +82,9 @@ class User extends Model{
 
 	public static function verifyLogin($inadmin = true)
 	{
-		if(
-
-			User::checkLogin($inadmin)
+		if(!isset($_SESSION[User::SESSION])
+			|| !$_SESSION[User::SESSION]
+			|| !(int)$_SESSION[User::SESSION]["iduser"] > 0
 			|| (bool)$_SESSION[User::SESSION]["inadmin"] !== $inadmin
 		
 		){
@@ -108,10 +108,12 @@ class User extends Model{
 
 	public function save(){
 		$sql = new Sql();
+
+		$password = password_hash($this->getdespassword(), PASSWORD_DEFAULT, [ "cost"=>12]);
 		$results = $sql->select("CALL sp_users_save(:desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
 			":desperson"=>$this->getdesperson(),
 			":deslogin"=>$this->getdeslogin(),
-			":despassword"=>$this->getdespassword(),
+			":despassword"=>$password,
 			":desemail"=>$this->getdesemail(),
 			":nrphone"=>$this->getnrphone(),
 			":inadmin"=>$this->getinadmin()
@@ -172,38 +174,41 @@ class User extends Model{
 				":iduser"=>$data["iduser"],
 				":desip"=>$_SERVER["REMOTE_ADDR"]
 			));
-			
 			if(count($results2) === 0)
 			{
 				throw new \Exception("Não foi possível recuperar a senha.");
 			}
 			else
 			{
-				 $dataRecovery = $results2[0];
-             $iv = random_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-             $code = openssl_encrypt($dataRecovery['idrecovery'], 'aes-256-cbc', User::SECRET, 0, $iv);
-             $result = base64_encode($iv.$code);
-             if ($inadmin === true) {
-                 $link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$result";
-             } else {
-                 $link = "http://www.hcodecommerce.com.br/forgot/reset?code=$result";
-             } 
-             $mailer = new Mailer($data['desemail'], $data['desperson'], "Redefinir senha da Hcode Store", "forgot", array(
-                 "name"=>$data['desperson'],
-                 "link"=>$link
-             )); 
-             $mailer->send();
-             return $link;
+				//metodo usado para gerar SECRET
+				//$encryption_key = base64_encode(openssl_random_pseudo_bytes(32));
+				$dataRecovery = $results2[0]['idrecovery'];
+				$encryption_key = base64_decode(User::SECRET);
+				$iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+				$code = openssl_encrypt($dataRecovery,'aes-256-cbc',$encryption_key,0,$iv);
+				$result = base64_encode($code.'::'.$iv);
+				
+             	if ($inadmin === true) {
+                 	$link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$result";
+             	} else {
+                 	$link = "http://www.hcodecommerce.com.br/forgot/reset?code=$result";
+             	} 
+            	 $mailer = new Mailer($data['desemail'], $data['desperson'], "Redefinir senha da Hcode Store", "forgot", array(
+                 	"name"=>$data['desperson'],
+                	"link"=>$link
+             	)); 
+            	$mailer->send();
+            	return $link;
 			}
 		}
 	}
 	public static function validForgotDecrypt($result)
  	{
-	     $result = base64_decode($result);
-	     $code = mb_substr($result, openssl_cipher_iv_length('aes-256-cbc'), null, '8bit');
-	     $iv = mb_substr($result, 0, openssl_cipher_iv_length('aes-256-cbc'), '8bit');;
-	     $idrecovery = openssl_decrypt($code, 'aes-256-cbc', User::SECRET, 0, $iv);
-	     
+
+ 		 $encryption_key = base64_decode(User::SECRET);
+ 		 list($code , $iv) = explode('::', base64_decode($result), 2);
+ 		 $idrecovery = openssl_decrypt($code, 'aes-256-cbc', $encryption_key, 0, $iv);
+ 		
 	     $sql = new Sql();
 	     $results = $sql->select("
 	         SELECT *
@@ -217,8 +222,9 @@ class User extends Model{
 	         AND
 	         DATE_ADD(a.dtregister, INTERVAL 1 HOUR) >= NOW();
 	     ", array(
-	         ":idrecovery"=>$idrecovery
+	         ':idrecovery'=>$idrecovery
 	     ));
+
 	     if (count($results) === 0)
 	     {
 	         throw new \Exception("Não foi possível recuperar a senha.");
