@@ -1,8 +1,8 @@
 <?php 
 
-function formatPrice(float $vlprice)
+function formatPrice(float $nps)
 {
-	return number_format($vlprice, 2, ",", ".");
+	return number_format($nps, 2, ",", ".");
 }
 
 
