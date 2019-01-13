@@ -2,9 +2,9 @@
 
 use \Hcode\Model\User;
 
-function formatPrice(float $nps)
+function formatPrice( $nps)
 {
-
+	if(!$nps > 0) $nps = 0;
 	return number_format($nps, 2, ",", ".");
 
 }
