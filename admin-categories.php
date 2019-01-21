@@ -8,8 +8,6 @@ use \Hcode\Model\Product;
 $app->get('/admin/categories', function() {
 	User::verifyLogin();
 
-	$categories = Category::listAll();
-
 	$search = (isset($_GET['search'])) ? $_GET['search']: "";
 
 	$page = (isset($_GET['page'])) ? (int)$_GET['page'] : 1;
