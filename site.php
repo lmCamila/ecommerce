@@ -165,6 +165,8 @@ $app->get('/checkout',function(){
 
 	if(!$address->getdesaddress()) $address->setdesaddress('');
 
+	if(!$address->getdesnumber()) $address->setdesnumber('');
+
 	if(!$address->descomplement()) $address->setdescomplement('');
 
 	if(!$address->getdesdistrict()) $address->setdesdistrict('');
@@ -287,7 +289,8 @@ $app->post('/login',function(){
 $app->get('/logout',function(){
 	User::logout();
 
-	header("Location: /login");
+	header('Location: /login');
+	exit();
 });
 
 $app->post("/register", function(){
